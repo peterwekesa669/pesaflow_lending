@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PesaFlow - Lending App</title>
+    <title>PesaFlow - Lending App Kenya</title>
     <style>
         * {
             margin: 0;
@@ -15,10 +15,12 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
+            color: #333;
         }
 
         .navbar {
             background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
@@ -29,26 +31,61 @@
         .logo {
             font-size: 1.8rem;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .logo .pesa {
-            color: #1e3c72;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
         .logo .flow {
-            color: #ff6b35;
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .admin-badge {
+            background: #ff6b35;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            margin-left: 10px;
         }
 
         .nav-links {
             display: flex;
             gap: 1.5rem;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .nav-links a {
             text-decoration: none;
             color: #666;
+            font-weight: 500;
             cursor: pointer;
+        }
+
+        .nav-links a:hover {
+            color: #2a5298;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: #2a5298;
         }
 
         .logout-btn {
@@ -77,6 +114,8 @@
         .card h2 {
             color: #1e3c72;
             margin-bottom: 1.5rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
         }
 
         .stats-grid {
@@ -93,10 +132,19 @@
             text-align: center;
         }
 
+        .stat-card h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+
         .stat-card .value {
             font-size: 1.5rem;
             font-weight: bold;
-            margin-top: 0.5rem;
+        }
+
+        .profit-card {
+            background: linear-gradient(135deg, #28a745, #20c997);
         }
 
         .form-group {
@@ -106,14 +154,16 @@
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            font-weight: bold;
+            font-weight: 500;
+            color: #555;
         }
 
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
         }
 
         .btn {
@@ -121,9 +171,15 @@
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
-            border-radius: 5px;
+            border-radius: 8px;
+            font-size: 1rem;
             cursor: pointer;
             width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.4);
         }
 
         .btn-success {
@@ -131,18 +187,23 @@
             width: auto;
         }
 
+        .loans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
         .loan-card {
             background: #f8f9fa;
-            padding: 1rem;
             border-radius: 10px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #ff6b35;
+            padding: 1.5rem;
+            border-left: 4px solid #2a5298;
         }
 
         .loan-amount {
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            color: #1e3c72;
+            color: #2a5298;
         }
 
         .loan-status {
@@ -161,6 +222,7 @@
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1.5rem;
+            border-left: 4px solid #2a5298;
         }
 
         .auth-container {
@@ -176,6 +238,7 @@
             padding: 2rem;
             width: 100%;
             max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
         .auth-card h1 {
@@ -190,8 +253,9 @@
         }
 
         .auth-switch a {
-            color: #ff6b35;
+            color: #2a5298;
             cursor: pointer;
+            text-decoration: none;
         }
 
         .alert {
@@ -229,22 +293,30 @@
             padding: 0.5rem;
         }
 
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .user-name {
-            font-weight: bold;
-            color: #1e3c72;
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #1e3c72;
+            color: white;
         }
     </style>
 </head>
 <body>
+    <!-- Auth Container -->
     <div id="authContainer" class="auth-container">
         <div class="auth-card">
             <h1>💰 PesaFlow</h1>
+            
+            <!-- User Login -->
             <div id="loginForm">
                 <form id="loginFormElement">
                     <div class="form-group">
@@ -260,7 +332,12 @@
                 <div class="auth-switch">
                     New user? <a onclick="showRegister()">Create Account</a>
                 </div>
+                <div class="auth-switch">
+                    <a onclick="showAdminLogin()" style="color: #ff6b35;">🔐 Admin Login</a>
+                </div>
             </div>
+
+            <!-- User Register -->
             <div id="registerForm" style="display:none">
                 <form id="registerFormElement">
                     <div class="form-group">
@@ -285,15 +362,33 @@
                     Already have account? <a onclick="showLogin()">Login</a>
                 </div>
             </div>
+
+            <!-- Admin Login -->
+            <div id="adminLoginForm" style="display:none">
+                <form id="adminLoginFormElement">
+                    <div class="form-group">
+                        <label>Admin Email</label>
+                        <input type="email" id="adminEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Admin Password</label>
+                        <input type="password" id="adminPassword" required>
+                    </div>
+                    <button type="submit" class="btn">Admin Login</button>
+                </form>
+                <div class="auth-switch">
+                    <a onclick="showLogin()">← Back to User Login</a>
+                </div>
+            </div>
+            
             <div id="authMessage"></div>
         </div>
     </div>
 
+    <!-- User Dashboard -->
     <div id="dashboardContainer" style="display:none">
         <nav class="navbar">
-            <div class="logo">
-                <span class="pesa">Pesa</span><span class="flow">Flow</span>
-            </div>
+            <div class="logo"><span class="pesa">Pesa</span><span class="flow">Flow</span></div>
             <div class="nav-links">
                 <a onclick="showDashboard()">Dashboard</a>
                 <a onclick="showApplyLoan()">Apply Loan</a>
@@ -347,9 +442,66 @@
         </div>
     </div>
 
+    <!-- Admin Dashboard -->
+    <div id="adminContainer" style="display:none">
+        <nav class="navbar">
+            <div class="logo">
+                <span class="pesa">Pesa</span><span class="flow">Flow</span>
+                <span class="admin-badge">ADMIN</span>
+            </div>
+            <div class="nav-links">
+                <a onclick="showAdminDashboard()">📊 Dashboard</a>
+                <a onclick="showAdminUsers()">👥 Users</a>
+                <a onclick="showAdminLoans()">📋 All Loans</a>
+                <a onclick="showAdminProfits()">💰 Profits</a>
+                <button class="logout-btn" onclick="adminLogout()">Logout</button>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div id="adminMessage"></div>
+
+            <div id="adminDashboardContent" class="dashboard-content active">
+                <div class="card">
+                    <h2>📊 Admin Dashboard</h2>
+                    <div class="stats-grid" id="adminStatsGrid">
+                        <div class="stat-card"><h3>Total Users</h3><div class="value" id="adminTotalUsers">0</div></div>
+                        <div class="stat-card"><h3>Total Loans</h3><div class="value" id="adminTotalLoans">0</div></div>
+                        <div class="stat-card"><h3>Active Loans</h3><div class="value" id="adminActiveLoans">0</div></div>
+                        <div class="stat-card"><h3>Completed</h3><div class="value" id="adminCompletedLoans">0</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="adminUsersContent" class="dashboard-content" style="display:none">
+                <div class="card">
+                    <h2>👥 All Registered Users</h2>
+                    <div id="adminUsersList">Loading...</div>
+                </div>
+            </div>
+
+            <div id="adminLoansContent" class="dashboard-content" style="display:none">
+                <div class="card">
+                    <h2>📋 All Customer Loans</h2>
+                    <div id="adminLoansList">Loading...</div>
+                </div>
+            </div>
+
+            <div id="adminProfitsContent" class="dashboard-content" style="display:none">
+                <div class="card">
+                    <h2>💰 Profit Report</h2>
+                    <div id="profitsData"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        let isAdmin = false;
+        let adminToken = null;
 
+        // ========== UI HELPERS ==========
         function showMessage(msg, type, container = 'message') {
             const msgDiv = document.getElementById(container);
             if (msgDiv) {
@@ -361,13 +513,22 @@
         function showRegister() {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('adminLoginForm').style.display = 'none';
         }
 
         function showLogin() {
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('adminLoginForm').style.display = 'none';
         }
 
+        function showAdminLogin() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('adminLoginForm').style.display = 'block';
+        }
+
+        // ========== USER AUTH ==========
         async function register(e) {
             e.preventDefault();
             const res = await fetch('/api/register', {
@@ -413,6 +574,7 @@
             location.reload();
         }
 
+        // ========== USER DASHBOARD ==========
         async function loadDashboard() {
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('dashboardContainer').style.display = 'block';
@@ -462,7 +624,7 @@
         }
 
         async function showMyLoans() {
-            document.querySelectorAll('.dashboard-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('myLoansContent').style.display = 'block';
 
             const res = await fetch(`/api/loans/my/${currentUser.id}`);
@@ -473,7 +635,7 @@
                 return;
             }
 
-            document.getElementById('loansList').innerHTML = loans.map(l => `
+            document.getElementById('loansList').innerHTML = `<div class="loans-grid">${loans.map(l => `
                 <div class="loan-card">
                     <div class="loan-amount">KES ${l.amount}</div>
                     <div>Interest: ${l.interestRate}%</div>
@@ -488,7 +650,7 @@
                         </div>
                     ` : ''}
                 </div>
-            `).join('');
+            `).join('')}</div>`;
         }
 
         async function makePayment(loanId) {
@@ -514,21 +676,170 @@
         }
 
         function showDashboard() {
-            document.querySelectorAll('.dashboard-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('dashboardContent').style.display = 'block';
             loadStats();
         }
 
         function showApplyLoan() {
-            document.querySelectorAll('.dashboard-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('applyLoanContent').style.display = 'block';
         }
 
-        document.getElementById('loginFormElement').addEventListener('submit', login);
-        document.getElementById('registerFormElement').addEventListener('submit', register);
-        document.getElementById('applyLoanForm').addEventListener('submit', applyLoan);
+        // ========== ADMIN FUNCTIONS ==========
+        async function adminLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                isAdmin = true;
+                adminToken = 'admin123';
+                localStorage.setItem('isAdmin', 'true');
+                localStorage.setItem('adminToken', adminToken);
+                loadAdminDashboard();
+            } else {
+                showMessage(data.error, 'error', 'authMessage');
+            }
+        }
 
-        if (currentUser) {
+        function adminLogout() {
+            localStorage.removeItem('isAdmin');
+            localStorage.removeItem('adminToken');
+            isAdmin = false;
+            location.reload();
+        }
+
+        async function loadAdminDashboard() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('dashboardContainer').style.display = 'none';
+            document.getElementById('adminContainer').style.display = 'block';
+            await loadAdminStats();
+        }
+
+        async function loadAdminStats() {
+            try {
+                const res = await fetch('/api/admin/loans', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const loans = await res.json();
+                
+                const resUsers = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const users = await resUsers.json();
+                
+                document.getElementById('adminTotalUsers').innerText = users.length || 0;
+                document.getElementById('adminTotalLoans').innerText = loans.length || 0;
+                document.getElementById('adminActiveLoans').innerText = loans.filter(l => l.status === 'active').length || 0;
+                document.getElementById('adminCompletedLoans').innerText = loans.filter(l => l.status === 'completed').length || 0;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function showAdminUsers() {
+            document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
+            document.getElementById('adminUsersContent').style.display = 'block';
+            
+            const res = await fetch('/api/admin/users', {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const users = await res.json();
+            
+            if (users.length === 0) {
+                document.getElementById('adminUsersList').innerHTML = '<p>No users yet.</p>';
+                return;
+            }
+            
+            document.getElementById('adminUsersList').innerHTML = `
+                <table>
+                    <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th></tr>
+                    ${users.map(u => `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${u.phone || '-'}</td></tr>`).join('')}
+                </table>
+            `;
+        }
+
+        async function showAdminLoans() {
+            document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
+            document.getElementById('adminLoansContent').style.display = 'block';
+            
+            const res = await fetch('/api/admin/loans', {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const loans = await res.json();
+            
+            if (loans.length === 0) {
+                document.getElementById('adminLoansList').innerHTML = '<p>No loans yet.</p>';
+                return;
+            }
+            
+            document.getElementById('adminLoansList').innerHTML = `
+                <div class="loans-grid">
+                    ${loans.map(l => `
+                        <div class="loan-card">
+                            <div class="loan-amount">KES ${l.amount}</div>
+                            <div>👤 ${l.borrowerName}</div>
+                            <div>📧 ${l.borrowerEmail}</div>
+                            <div>📅 Due: ${l.dueDate}</div>
+                            <div>💰 Total: KES ${l.totalPayable} | Paid: KES ${l.paidAmount || 0}</div>
+                            <div class="loan-status status-${l.status}">${l.status.toUpperCase()}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function showAdminProfits() {
+            document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
+            document.getElementById('adminProfitsContent').style.display = 'block';
+            
+            const res = await fetch('/api/admin/profits', {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const p = await res.json();
+            
+            document.getElementById('profitsData').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card profit-card"><h3>Total Loans Given</h3><div class="value">${p.totalLoansGiven}</div></div>
+                    <div class="stat-card profit-card"><h3>Completed Loans</h3><div class="value">${p.completedLoans}</div></div>
+                    <div class="stat-card profit-card"><h3>Active Loans</h3><div class="value">${p.activeLoans}</div></div>
+                    <div class="stat-card"><h3>Total Disbursed</h3><div class="value">KES ${p.totalDisbursed}</div></div>
+                    <div class="stat-card"><h3>Total Collected</h3><div class="value">KES ${p.totalCollected}</div></div>
+                    <div class="stat-card profit-card"><h3>💰 TOTAL PROFIT</h3><div class="value">KES ${p.totalProfit}</div></div>
+                    <div class="stat-card"><h3>Expected Profit</h3><div class="value">KES ${p.expectedProfit}</div></div>
+                </div>
+            `;
+        }
+
+        function showAdminDashboard() {
+            document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
+            document.getElementById('adminDashboardContent').style.display = 'block';
+            loadAdminStats();
+        }
+
+        // ========== EVENT LISTENERS ==========
+        document.getElementById('loginFormElement')?.addEventListener('submit', login);
+        document.getElementById('registerFormElement')?.addEventListener('submit', register);
+        document.getElementById('applyLoanForm')?.addEventListener('submit', applyLoan);
+        document.getElementById('adminLoginFormElement')?.addEventListener('submit', adminLogin);
+
+        // ========== INITIALIZATION ==========
+        const savedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+        const savedAdminToken = localStorage.getItem('adminToken');
+
+        if (savedIsAdmin && savedAdminToken) {
+            isAdmin = true;
+            adminToken = savedAdminToken;
+            loadAdminDashboard();
+        } else if (currentUser) {
             loadDashboard();
         }
     </script>

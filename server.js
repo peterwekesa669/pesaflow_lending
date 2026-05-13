@@ -5,11 +5,13 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-// In-memory storage (no database needed!)
+// In-memory storage
 const users = [];
 const loans = [];
 let nextUserId = 1;
 let nextLoanId = 1;
+
+// ========== USER ROUTES ==========
 
 // Register
 app.post('/api/register', (req, res) => {
@@ -153,6 +155,75 @@ app.post('/api/payments', (req, res) => {
     }
 });
 
+// ========== ADMIN ROUTES ==========
+
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+    const { email, password } = req.body;
+    console.log('Admin login attempt:', email);
+    if (email === 'admin@pesaflow.com' && password === 'admin123') {
+        res.json({ success: true, admin: { name: 'Admin', role: 'admin' } });
+        console.log('Admin login successful');
+    } else {
+        res.status(401).json({ error: 'Invalid admin credentials' });
+        console.log('Admin login failed');
+    }
+});
+
+// Get all users (admin)
+app.get('/api/admin/users', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer admin123') {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const safeUsers = users.map(u => ({ id: u.id, name: u.name, email: u.email, phone: u.phone }));
+    res.json(safeUsers);
+});
+
+// Get all loans (admin)
+app.get('/api/admin/loans', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer admin123') {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const allLoans = loans.map(loan => {
+        const user = users.find(u => u.id == loan.userId);
+        return {
+            ...loan,
+            borrowerName: user ? user.name : 'Unknown',
+            borrowerEmail: user ? user.email : 'Unknown',
+            dueDate: loan.dueDate.toLocaleDateString()
+        };
+    });
+    res.json(allLoans);
+});
+
+// Get profit report (admin)
+app.get('/api/admin/profits', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer admin123') {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const completedLoans = loans.filter(l => l.status === 'completed');
+    const totalLoanAmount = completedLoans.reduce((sum, l) => sum + l.amount, 0);
+    const totalCollected = completedLoans.reduce((sum, l) => sum + l.paidAmount, 0);
+    const totalProfit = totalCollected - totalLoanAmount;
+    const activeLoans = loans.filter(l => l.status === 'active');
+    const expectedProfit = activeLoans.reduce((sum, l) => sum + (l.totalPayable - l.amount), 0);
+    
+    res.json({
+        totalLoansGiven: loans.length,
+        completedLoans: completedLoans.length,
+        activeLoans: activeLoans.length,
+        totalDisbursed: totalLoanAmount,
+        totalCollected: totalCollected,
+        totalProfit: totalProfit,
+        expectedProfit: expectedProfit,
+        averageInterestRate: 25
+    });
+});
+
 // Serve HTML
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -163,5 +234,6 @@ app.listen(PORT, () => {
     console.log('\n========================================');
     console.log('PesaFlow Lending App is Running!');
     console.log(`Open: http://localhost:${PORT}`);
+    console.log('Admin Login: admin@pesaflow.com / admin123');
     console.log('========================================\n');
 });

@@ -5,11 +5,13 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
+// In-memory storage (no database needed!)
 const users = [];
 const loans = [];
 let nextUserId = 1;
 let nextLoanId = 1;
 
+// Register
 app.post('/api/register', (req, res) => {
     try {
         const { name, email, password, phone } = req.body;
@@ -22,6 +24,7 @@ app.post('/api/register', (req, res) => {
     }
 });
 
+// Login
 app.post('/api/login', (req, res) => {
     try {
         const { email, password } = req.body;
@@ -37,11 +40,13 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Check active loan
 app.get('/api/check-active-loan/:userId', (req, res) => {
     const activeLoan = loans.find(l => l.userId == req.params.userId && l.status === 'active');
     res.json({ hasActiveLoan: !!activeLoan });
 });
 
+// Apply for loan
 app.post('/api/loans/apply', (req, res) => {
     try {
         const { userId, amount } = req.body;
@@ -89,6 +94,7 @@ app.post('/api/loans/apply', (req, res) => {
     }
 });
 
+// Get my loans
 app.get('/api/loans/my/:userId', (req, res) => {
     try {
         const userLoans = loans.filter(l => l.userId == req.params.userId);
@@ -98,6 +104,7 @@ app.get('/api/loans/my/:userId', (req, res) => {
     }
 });
 
+// Dashboard stats
 app.get('/api/dashboard/:userId', (req, res) => {
     try {
         const userLoans = loans.filter(l => l.userId == req.params.userId);
@@ -112,6 +119,7 @@ app.get('/api/dashboard/:userId', (req, res) => {
     }
 });
 
+// Make payment
 app.post('/api/payments', (req, res) => {
     try {
         const { loanId, amount } = req.body;
@@ -145,14 +153,15 @@ app.post('/api/payments', (req, res) => {
     }
 });
 
+// Serve HTML
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('\n========================================');
     console.log('PesaFlow Lending App is Running!');
-    console.log('Open: http://localhost:3000');
+    console.log(`Open: http://localhost:${PORT}`);
     console.log('========================================\n');
 });

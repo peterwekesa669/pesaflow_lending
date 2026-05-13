@@ -1,5 +1,7 @@
 const express = require('express');
 const path = require('path');
+const axios = require('axios');
+const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
@@ -11,9 +13,148 @@ const loans = [];
 let nextUserId = 1;
 let nextLoanId = 1;
 
+// ========== M-PESA CONFIGURATION ==========
+const MPESA_CONFIG = {
+    consumerKey: 'XumLmTm2fOQ2Lf9KG5ibb6QYE4CmzxjMuvHOIGfGCiWnZHA',
+    consumerSecret: 'j9T3TiANLj0HAosJtqYrhwpoMfleiv5Hd64SirF8mQSMZall7T863kVX7Wg05N',
+    passkey: 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
+    shortcode: '174379',
+    environment: 'sandbox'
+};
+
+// Get OAuth token from Safaricom
+async function getMpesaToken() {
+    const auth = Buffer.from(`${MPESA_CONFIG.consumerKey}:${MPESA_CONFIG.consumerSecret}`).toString('base64');
+    try {
+        const response = await axios.get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
+            headers: { Authorization: `Basic ${auth}` }
+        });
+        return response.data.access_token;
+    } catch (error) {
+        console.error('M-Pesa token error:', error.message);
+        return null;
+    }
+}
+
+// Format phone number for M-Pesa
+function formatPhoneNumber(phone) {
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+        cleaned = '254' + cleaned.substring(1);
+    } else if (cleaned.startsWith('+')) {
+        cleaned = cleaned.substring(1);
+    } else if (!cleaned.startsWith('254')) {
+        cleaned = '254' + cleaned;
+    }
+    return cleaned;
+}
+
+// ========== M-PESA ROUTES ==========
+
+// Initiate STK Push (Lipa Na M-Pesa Online)
+app.post('/api/mpesa/stkpush', async (req, res) => {
+    try {
+        const { phone, amount, loanId, userId } = req.body;
+        
+        const loan = loans.find(l => l.id == loanId && l.userId == userId);
+        if (!loan) {
+            return res.status(404).json({ error: 'Loan not found' });
+        }
+        
+        if (amount > loan.remainingAmount) {
+            return res.status(400).json({ error: `Amount exceeds remaining balance of KES ${loan.remainingAmount}` });
+        }
+        
+        const formattedPhone = formatPhoneNumber(phone);
+        const token = await getMpesaToken();
+        
+        if (!token) {
+            return res.status(500).json({ error: 'M-Pesa service unavailable. Please try again later.' });
+        }
+        
+        const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+        const password = Buffer.from(`${MPESA_CONFIG.shortcode}${MPESA_CONFIG.passkey}${timestamp}`).toString('base64');
+        
+        const data = {
+            BusinessShortCode: MPESA_CONFIG.shortcode,
+            Password: password,
+            Timestamp: timestamp,
+            TransactionType: 'CustomerPayBillOnline',
+            Amount: Math.round(amount),
+            PartyA: formattedPhone,
+            PartyB: MPESA_CONFIG.shortcode,
+            PhoneNumber: formattedPhone,
+            CallBackURL: 'https://pesaflow-lending.onrender.com/api/mpesa/callback',
+            AccountReference: `LOAN-${loanId}`,
+            TransactionDesc: `PesaFlow Loan Payment`
+        };
+        
+        const response = await axios.post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', data, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        loan.mpesaCheckoutID = response.data.CheckoutRequestID;
+        loan.pendingPaymentAmount = amount;
+        
+        res.json({ 
+            success: true, 
+            message: 'M-Pesa prompt sent to your phone. Enter your PIN to complete payment.',
+            checkoutRequestID: response.data.CheckoutRequestID
+        });
+        
+    } catch (error) {
+        console.error('M-Pesa error:', error.response?.data || error.message);
+        res.status(500).json({ error: 'Failed to initiate M-Pesa payment. Please try again.' });
+    }
+});
+
+// M-Pesa Callback
+app.post('/api/mpesa/callback', (req, res) => {
+    const { Body } = req.body;
+    
+    console.log('M-Pesa callback received');
+    
+    if (Body.stkCallback.ResultCode === 0) {
+        const checkoutRequestID = Body.stkCallback.CheckoutRequestID;
+        const callbackMetadata = Body.stkCallback.CallbackMetadata.Item;
+        
+        let amount = 0;
+        let receiptNumber = '';
+        
+        callbackMetadata.forEach(item => {
+            if (item.Name === 'Amount') amount = item.Value;
+            if (item.Name === 'MpesaReceiptNumber') receiptNumber = item.Value;
+        });
+        
+        const loan = loans.find(l => l.mpesaCheckoutID === checkoutRequestID);
+        
+        if (loan) {
+            const paymentAmount = loan.pendingPaymentAmount || amount;
+            
+            loan.paidAmount = (loan.paidAmount || 0) + paymentAmount;
+            loan.remainingAmount -= paymentAmount;
+            
+            if (loan.remainingAmount <= 0) {
+                loan.status = 'completed';
+                loan.remainingAmount = 0;
+            }
+            
+            loan.mpesaReceipt = receiptNumber;
+            loan.mpesaPaidAt = new Date();
+            delete loan.mpesaCheckoutID;
+            delete loan.pendingPaymentAmount;
+            
+            console.log(`✅ Payment recorded: KES ${paymentAmount} for loan ${loan.id}`);
+        }
+    } else {
+        console.log(`❌ M-Pesa payment failed: ${Body.stkCallback.ResultDesc}`);
+    }
+    
+    res.json({ ResultCode: 0, ResultDesc: "Success" });
+});
+
 // ========== USER ROUTES ==========
 
-// Register
 app.post('/api/register', (req, res) => {
     try {
         const { name, email, password, phone } = req.body;
@@ -26,13 +167,12 @@ app.post('/api/register', (req, res) => {
     }
 });
 
-// Login
 app.post('/api/login', (req, res) => {
     try {
         const { email, password } = req.body;
         const user = users.find(u => u.email === email && u.password === password);
         if (user) {
-            res.json({ success: true, user: { id: user.id, name: user.name, email } });
+            res.json({ success: true, user: { id: user.id, name: user.name, email, phone: user.phone } });
             console.log('User logged in:', email);
         } else {
             res.status(401).json({ error: 'Invalid credentials' });
@@ -42,13 +182,11 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Check active loan
 app.get('/api/check-active-loan/:userId', (req, res) => {
     const activeLoan = loans.find(l => l.userId == req.params.userId && l.status === 'active');
     res.json({ hasActiveLoan: !!activeLoan });
 });
 
-// Apply for loan
 app.post('/api/loans/apply', (req, res) => {
     try {
         const { userId, amount } = req.body;
@@ -96,7 +234,6 @@ app.post('/api/loans/apply', (req, res) => {
     }
 });
 
-// Get my loans
 app.get('/api/loans/my/:userId', (req, res) => {
     try {
         const userLoans = loans.filter(l => l.userId == req.params.userId);
@@ -106,7 +243,6 @@ app.get('/api/loans/my/:userId', (req, res) => {
     }
 });
 
-// Dashboard stats
 app.get('/api/dashboard/:userId', (req, res) => {
     try {
         const userLoans = loans.filter(l => l.userId == req.params.userId);
@@ -121,19 +257,13 @@ app.get('/api/dashboard/:userId', (req, res) => {
     }
 });
 
-// Make payment
 app.post('/api/payments', (req, res) => {
     try {
         const { loanId, amount } = req.body;
         const loan = loans.find(l => l.id == loanId);
         
-        if (!loan) {
-            return res.status(404).json({ error: 'Loan not found' });
-        }
-        
-        if (amount > loan.remainingAmount) {
-            return res.status(400).json({ error: 'Amount exceeds remaining balance' });
-        }
+        if (!loan) return res.status(404).json({ error: 'Loan not found' });
+        if (amount > loan.remainingAmount) return res.status(400).json({ error: 'Amount exceeds remaining balance' });
         
         loan.paidAmount += amount;
         loan.remainingAmount -= amount;
@@ -144,12 +274,10 @@ app.post('/api/payments', (req, res) => {
         }
         
         let message = `Payment of KES ${amount} received. Remaining: KES ${loan.remainingAmount}`;
-        if (loan.remainingAmount === 0) {
-            message = 'Loan fully paid! Thank you!';
-        }
+        if (loan.remainingAmount === 0) message = 'Loan fully paid! Thank you!';
         
         res.json({ success: true, message, remainingAmount: loan.remainingAmount });
-        console.log('Payment made:', amount);
+        console.log('Manual payment:', amount);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -157,70 +285,43 @@ app.post('/api/payments', (req, res) => {
 
 // ========== ADMIN ROUTES ==========
 
-// Admin login
 app.post('/api/admin/login', (req, res) => {
     const { email, password } = req.body;
-    console.log('Admin login attempt:', email);
     if (email === 'admin@pesaflow.com' && password === 'admin123') {
         res.json({ success: true, admin: { name: 'Admin', role: 'admin' } });
-        console.log('Admin login successful');
     } else {
         res.status(401).json({ error: 'Invalid admin credentials' });
-        console.log('Admin login failed');
     }
 });
 
-// Get all users (admin)
 app.get('/api/admin/users', (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader !== 'Bearer admin123') {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (req.headers.authorization !== 'Bearer admin123') return res.status(401).json({ error: 'Unauthorized' });
     const safeUsers = users.map(u => ({ id: u.id, name: u.name, email: u.email, phone: u.phone }));
     res.json(safeUsers);
 });
 
-// Get all loans (admin)
 app.get('/api/admin/loans', (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader !== 'Bearer admin123') {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (req.headers.authorization !== 'Bearer admin123') return res.status(401).json({ error: 'Unauthorized' });
     const allLoans = loans.map(loan => {
         const user = users.find(u => u.id == loan.userId);
-        return {
-            ...loan,
-            borrowerName: user ? user.name : 'Unknown',
-            borrowerEmail: user ? user.email : 'Unknown',
-            dueDate: loan.dueDate.toLocaleDateString()
-        };
+        return { ...loan, borrowerName: user?.name || 'Unknown', borrowerEmail: user?.email || 'Unknown', dueDate: loan.dueDate.toLocaleDateString() };
     });
     res.json(allLoans);
 });
 
-// Get profit report (admin)
 app.get('/api/admin/profits', (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader !== 'Bearer admin123') {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-    
+    if (req.headers.authorization !== 'Bearer admin123') return res.status(401).json({ error: 'Unauthorized' });
     const completedLoans = loans.filter(l => l.status === 'completed');
     const totalLoanAmount = completedLoans.reduce((sum, l) => sum + l.amount, 0);
     const totalCollected = completedLoans.reduce((sum, l) => sum + l.paidAmount, 0);
-    const totalProfit = totalCollected - totalLoanAmount;
-    const activeLoans = loans.filter(l => l.status === 'active');
-    const expectedProfit = activeLoans.reduce((sum, l) => sum + (l.totalPayable - l.amount), 0);
-    
     res.json({
         totalLoansGiven: loans.length,
         completedLoans: completedLoans.length,
-        activeLoans: activeLoans.length,
+        activeLoans: loans.filter(l => l.status === 'active').length,
         totalDisbursed: totalLoanAmount,
         totalCollected: totalCollected,
-        totalProfit: totalProfit,
-        expectedProfit: expectedProfit,
-        averageInterestRate: 25
+        totalProfit: totalCollected - totalLoanAmount,
+        expectedProfit: loans.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.totalPayable - l.amount), 0)
     });
 });
 
@@ -232,8 +333,9 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('\n========================================');
-    console.log('PesaFlow Lending App is Running!');
-    console.log(`Open: http://localhost:${PORT}`);
-    console.log('Admin Login: admin@pesaflow.com / admin123');
+    console.log('💰 PesaFlow with M-Pesa is RUNNING!');
+    console.log(`📱 Open: http://localhost:${PORT}`);
+    console.log('👨‍💼 Admin: admin@pesaflow.com / admin123');
+    console.log('💳 M-Pesa: Ready for payments!');
     console.log('========================================\n');
 });

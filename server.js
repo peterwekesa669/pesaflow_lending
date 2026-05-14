@@ -7,9 +7,9 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ========== SETTINGS ==========
-// SET THIS TO true FOR TESTING (no real money)
-// SET THIS TO false FOR REAL M-PESA (requires real credentials)
-const TEST_MODE = true;  // ← CHANGE TO false WHEN READY FOR REAL M-PESA
+// SET THIS TO false FOR REAL M-PESA TESTING
+// SET THIS TO true FOR SIMULATION (no actual API call)
+const TEST_MODE = false;  // ← false = real M-Pesa API, true = simulation
 
 // In-memory storage
 const users = [];
@@ -17,7 +17,7 @@ const loans = [];
 let nextUserId = 1;
 let nextLoanId = 1;
 
-// ========== M-PESA CONFIGURATION (only used when TEST_MODE = false) ==========
+// ========== M-PESA CONFIGURATION ==========
 const MPESA_CONFIG = {
     consumerKey: 'XumLmTm2fOQ2Lf9KG5ibb6QYE4CmzxjMuvHOIGfGCiWnZHA',
     consumerSecret: 'j9T3TiANLj0HAosJtqYrhwpoMfleiv5Hd64SirF8mQSMZall7T863kVX7Wg05N',
@@ -26,20 +26,23 @@ const MPESA_CONFIG = {
     environment: 'sandbox'
 };
 
-// ========== M-PESA HELPER FUNCTIONS (for real mode) ==========
+// Get OAuth token from Safaricom
 async function getMpesaToken() {
     const auth = Buffer.from(`${MPESA_CONFIG.consumerKey}:${MPESA_CONFIG.consumerSecret}`).toString('base64');
     try {
+        console.log('🔄 Getting M-Pesa token...');
         const response = await axios.get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
             headers: { Authorization: `Basic ${auth}` }
         });
+        console.log('✅ Token obtained successfully');
         return response.data.access_token;
     } catch (error) {
-        console.error('M-Pesa token error:', error.message);
+        console.error('❌ M-Pesa token error:', error.response?.data || error.message);
         return null;
     }
 }
 
+// Format phone number for M-Pesa (254XXXXXXXXX)
 function formatPhoneNumber(phone) {
     let cleaned = phone.replace(/\D/g, '');
     if (cleaned.startsWith('0')) {
@@ -49,23 +52,32 @@ function formatPhoneNumber(phone) {
     } else if (!cleaned.startsWith('254')) {
         cleaned = '254' + cleaned;
     }
+    console.log('📱 Formatted phone:', cleaned);
     return cleaned;
 }
 
-// ========== M-PESA ROUTE ==========
+// ========== M-PESA STK PUSH ROUTE ==========
 app.post('/api/mpesa/stkpush', async (req, res) => {
     try {
         const { phone, amount, loanId, userId } = req.body;
         
-        console.log('💰 Payment request:', { phone, amount, loanId, userId });
+        console.log('========================================');
+        console.log('💰 M-PESA PAYMENT REQUEST RECEIVED');
+        console.log('   Phone:', phone);
+        console.log('   Amount:', amount);
+        console.log('   Loan ID:', loanId);
+        console.log('   User ID:', userId);
+        console.log('========================================');
         
         // Find the loan
         const loan = loans.find(l => l.id == loanId && l.userId == userId);
         if (!loan) {
+            console.log('❌ Loan not found:', loanId);
             return res.status(404).json({ error: 'Loan not found' });
         }
         
         if (amount > loan.remainingAmount) {
+            console.log('❌ Amount exceeds remaining balance');
             return res.status(400).json({ error: `Amount exceeds remaining balance of KES ${loan.remainingAmount}` });
         }
         
@@ -73,7 +85,6 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
             // ========== TEST MODE - Simulate successful payment ==========
             console.log('🧪 TEST MODE: Simulating payment of KES', amount);
             
-            // Update loan
             loan.paidAmount = (loan.paidAmount || 0) + amount;
             loan.remainingAmount -= amount;
             
@@ -88,6 +99,7 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
                 testMode: true,
                 remainingAmount: loan.remainingAmount
             });
+            console.log('✅ TEST MODE: Payment recorded');
             
         } else {
             // ========== REAL M-PESA MODE ==========
@@ -95,6 +107,7 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
             const token = await getMpesaToken();
             
             if (!token) {
+                console.log('❌ Failed to get M-Pesa token');
                 return res.status(500).json({ error: 'M-Pesa service unavailable. Please try again.' });
             }
             
@@ -115,37 +128,55 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
                 TransactionDesc: 'PesaFlow Loan Payment'
             };
             
+            console.log('📤 Sending STK push request to Safaricom...');
             const response = await axios.post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', data, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            
+            console.log('📥 STK push response:', response.data);
             
             loan.mpesaCheckoutID = response.data.CheckoutRequestID;
             loan.pendingPaymentAmount = amount;
             
             res.json({ 
                 success: true, 
-                message: 'M-Pesa prompt sent to your phone. Enter your PIN to complete payment.',
+                message: '📱 M-Pesa prompt sent to your phone. Enter your PIN to complete payment.',
                 checkoutRequestID: response.data.CheckoutRequestID
             });
+            console.log('✅ STK push sent successfully');
         }
         
     } catch (error) {
-        console.error('M-Pesa error:', error.response?.data || error.message);
+        console.error('❌ M-Pesa error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Payment failed. Please try again.' });
     }
 });
 
-// M-Pesa Callback (for real mode only)
+// ========== M-PESA CALLBACK ROUTE ==========
 app.post('/api/mpesa/callback', (req, res) => {
     const { Body } = req.body;
-    console.log('M-Pesa callback received');
+    console.log('========================================');
+    console.log('📞 M-PESA CALLBACK RECEIVED');
+    console.log(JSON.stringify(Body, null, 2));
+    console.log('========================================');
     
     if (Body?.stkCallback?.ResultCode === 0) {
         const checkoutRequestID = Body.stkCallback.CheckoutRequestID;
+        const callbackMetadata = Body.stkCallback.CallbackMetadata?.Item || [];
+        
+        let amount = 0;
+        let receiptNumber = '';
+        
+        callbackMetadata.forEach(item => {
+            if (item.Name === 'Amount') amount = item.Value;
+            if (item.Name === 'MpesaReceiptNumber') receiptNumber = item.Value;
+        });
+        
         const loan = loans.find(l => l.mpesaCheckoutID === checkoutRequestID);
         
         if (loan) {
-            const paymentAmount = loan.pendingPaymentAmount || 0;
+            const paymentAmount = loan.pendingPaymentAmount || amount;
+            
             loan.paidAmount = (loan.paidAmount || 0) + paymentAmount;
             loan.remainingAmount -= paymentAmount;
             
@@ -154,11 +185,19 @@ app.post('/api/mpesa/callback', (req, res) => {
                 loan.remainingAmount = 0;
             }
             
+            loan.mpesaReceipt = receiptNumber;
+            loan.mpesaPaidAt = new Date();
             delete loan.mpesaCheckoutID;
             delete loan.pendingPaymentAmount;
             
             console.log(`✅ Payment recorded: KES ${paymentAmount} for loan ${loan.id}`);
+            console.log(`   Receipt: ${receiptNumber}`);
+            console.log(`   Remaining: KES ${loan.remainingAmount}`);
+        } else {
+            console.log(`❌ Loan not found for CheckoutID: ${checkoutRequestID}`);
         }
+    } else {
+        console.log(`❌ M-Pesa payment failed: ${Body?.stkCallback?.ResultDesc || 'Unknown error'}`);
     }
     
     res.json({ ResultCode: 0, ResultDesc: "Success" });
@@ -348,11 +387,11 @@ app.listen(PORT, () => {
     console.log('👨‍💼 Admin: admin@pesaflow.com / admin123');
     console.log('========================================');
     if (TEST_MODE) {
-        console.log('🧪 TEST MODE: Payments are SIMULATED (no real money)');
-        console.log('   ✅ M-Pesa payments work instantly for testing');
-        console.log('   🔧 Set TEST_MODE = false for real M-Pesa');
+        console.log('🧪 TEST MODE: Payments are SIMULATED');
     } else {
-        console.log('💳 REAL M-PESA MODE: Real money transactions');
+        console.log('💳 REAL M-PESA MODE: Sandbox API');
+        console.log('   Test Phone: 254708374149');
+        console.log('   Test PIN: 123456');
     }
     console.log('========================================\n');
 });

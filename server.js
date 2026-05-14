@@ -7,9 +7,9 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ========== SETTINGS ==========
-// SET THIS TO false FOR REAL M-PESA TESTING
+// SET THIS TO true FOR REAL M-PESA TESTING
 // SET THIS TO true FOR SIMULATION (no actual API call)
-const TEST_MODE = false;  // ← false = real M-Pesa API, true = simulation
+const TEST_MODE = true;  // ← true = real M-Pesa API, true = simulation
 
 // In-memory storage
 const users = [];

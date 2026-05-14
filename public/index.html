@@ -132,19 +132,9 @@
             text-align: center;
         }
 
-        .stat-card h3 {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            opacity: 0.9;
-        }
-
         .stat-card .value {
             font-size: 1.5rem;
             font-weight: bold;
-        }
-
-        .profit-card {
-            background: linear-gradient(135deg, #28a745, #20c997);
         }
 
         .form-group {
@@ -154,16 +144,14 @@
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #555;
+            font-weight: bold;
         }
 
-        .form-group input, .form-group select {
+        .form-group input {
             width: 100%;
             padding: 0.75rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
 
         .btn {
@@ -171,15 +159,15 @@
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-size: 1rem;
+            border-radius: 5px;
             cursor: pointer;
             width: 100%;
+            font-size: 1rem;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.4);
+        .btn-mpesa {
+            background: linear-gradient(135deg, #00a859, #008040);
+            margin-top: 0.5rem;
         }
 
         .btn-success {
@@ -187,23 +175,18 @@
             width: auto;
         }
 
-        .loans-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
-        }
-
         .loan-card {
             background: #f8f9fa;
-            border-radius: 10px;
             padding: 1.5rem;
-            border-left: 4px solid #2a5298;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #ff6b35;
         }
 
         .loan-amount {
             font-size: 1.5rem;
             font-weight: bold;
-            color: #2a5298;
+            color: #1e3c72;
         }
 
         .loan-status {
@@ -238,7 +221,6 @@
             padding: 2rem;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
         .auth-card h1 {
@@ -255,7 +237,6 @@
         .auth-switch a {
             color: #2a5298;
             cursor: pointer;
-            text-decoration: none;
         }
 
         .alert {
@@ -282,31 +263,39 @@
             display: block;
         }
 
+        .payment-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ddd;
+        }
+
         .payment-input {
             display: flex;
             gap: 0.5rem;
             margin-top: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .payment-input input {
             flex: 1;
             padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
 
-        table {
+        .payment-input button {
+            width: auto;
+            padding: 0.5rem 1rem;
+        }
+
+        .mpesa-input {
+            margin-top: 0.5rem;
+        }
+
+        .mpesa-input input {
             width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background: #1e3c72;
-            color: white;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -315,8 +304,6 @@
     <div id="authContainer" class="auth-container">
         <div class="auth-card">
             <h1>💰 PesaFlow</h1>
-            
-            <!-- User Login -->
             <div id="loginForm">
                 <form id="loginFormElement">
                     <div class="form-group">
@@ -336,8 +323,6 @@
                     <a onclick="showAdminLogin()" style="color: #ff6b35;">🔐 Admin Login</a>
                 </div>
             </div>
-
-            <!-- User Register -->
             <div id="registerForm" style="display:none">
                 <form id="registerFormElement">
                     <div class="form-group">
@@ -349,8 +334,8 @@
                         <input type="email" id="regEmail" required>
                     </div>
                     <div class="form-group">
-                        <label>Phone</label>
-                        <input type="text" id="regPhone">
+                        <label>Phone (for M-Pesa)</label>
+                        <input type="tel" id="regPhone" placeholder="0712345678">
                     </div>
                     <div class="form-group">
                         <label>Password</label>
@@ -362,8 +347,6 @@
                     Already have account? <a onclick="showLogin()">Login</a>
                 </div>
             </div>
-
-            <!-- Admin Login -->
             <div id="adminLoginForm" style="display:none">
                 <form id="adminLoginFormElement">
                     <div class="form-group">
@@ -380,7 +363,6 @@
                     <a onclick="showLogin()">← Back to User Login</a>
                 </div>
             </div>
-            
             <div id="authMessage"></div>
         </div>
     </div>
@@ -404,7 +386,7 @@
             <div id="message"></div>
 
             <div class="info-box">
-                <strong>How It Works:</strong> Borrow KES 200 - 5,000 | 25% interest | 1 week term | One loan at a time
+                <strong>💰 How It Works:</strong> Borrow KES 200 - 5,000 | 25% interest | 1 week term | One loan at a time
             </div>
 
             <div id="dashboardContent" class="dashboard-content active">
@@ -426,7 +408,12 @@
                     <form id="applyLoanForm">
                         <div class="form-group">
                             <label>Loan Amount (KES)</label>
-                            <input type="number" id="loanAmount" required min="200" max="5000" step="100">
+                            <input type="number" id="loanAmount" required min="200" max="5000" step="100" placeholder="200 - 5,000">
+                        </div>
+                        <div class="info-box" style="margin-top: 1rem;">
+                            <p>💰 Interest: <strong>25%</strong></p>
+                            <p>📅 Term: <strong>7 days</strong></p>
+                            <p>💵 Total to repay: <strong id="previewTotal">KES 0</strong></p>
                         </div>
                         <button type="submit" class="btn">Submit Application</button>
                     </form>
@@ -445,10 +432,7 @@
     <!-- Admin Dashboard -->
     <div id="adminContainer" style="display:none">
         <nav class="navbar">
-            <div class="logo">
-                <span class="pesa">Pesa</span><span class="flow">Flow</span>
-                <span class="admin-badge">ADMIN</span>
-            </div>
+            <div class="logo"><span class="pesa">Pesa</span><span class="flow">Flow</span><span class="admin-badge">ADMIN</span></div>
             <div class="nav-links">
                 <a onclick="showAdminDashboard()">📊 Dashboard</a>
                 <a onclick="showAdminUsers()">👥 Users</a>
@@ -457,13 +441,11 @@
                 <button class="logout-btn" onclick="adminLogout()">Logout</button>
             </div>
         </nav>
-
         <div class="container">
             <div id="adminMessage"></div>
-
             <div id="adminDashboardContent" class="dashboard-content active">
                 <div class="card">
-                    <h2>📊 Admin Dashboard</h2>
+                    <h2>Admin Dashboard</h2>
                     <div class="stats-grid" id="adminStatsGrid">
                         <div class="stat-card"><h3>Total Users</h3><div class="value" id="adminTotalUsers">0</div></div>
                         <div class="stat-card"><h3>Total Loans</h3><div class="value" id="adminTotalLoans">0</div></div>
@@ -472,26 +454,14 @@
                     </div>
                 </div>
             </div>
-
             <div id="adminUsersContent" class="dashboard-content" style="display:none">
-                <div class="card">
-                    <h2>👥 All Registered Users</h2>
-                    <div id="adminUsersList">Loading...</div>
-                </div>
+                <div class="card"><h2>All Users</h2><div id="adminUsersList"></div></div>
             </div>
-
             <div id="adminLoansContent" class="dashboard-content" style="display:none">
-                <div class="card">
-                    <h2>📋 All Customer Loans</h2>
-                    <div id="adminLoansList">Loading...</div>
-                </div>
+                <div class="card"><h2>All Loans</h2><div id="adminLoansList"></div></div>
             </div>
-
             <div id="adminProfitsContent" class="dashboard-content" style="display:none">
-                <div class="card">
-                    <h2>💰 Profit Report</h2>
-                    <div id="profitsData"></div>
-                </div>
+                <div class="card"><h2>Profit Report</h2><div id="profitsData"></div></div>
             </div>
         </div>
     </div>
@@ -501,80 +471,39 @@
         let isAdmin = false;
         let adminToken = null;
 
-        // ========== UI HELPERS ==========
         function showMessage(msg, type, container = 'message') {
-            const msgDiv = document.getElementById(container);
-            if (msgDiv) {
-                msgDiv.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
-                setTimeout(() => msgDiv.innerHTML = '', 5000);
-            }
+            const d = document.getElementById(container);
+            if (d) { d.innerHTML = `<div class="alert alert-${type}">${msg}</div>`; setTimeout(() => d.innerHTML = '', 5000); }
         }
 
-        function showRegister() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            document.getElementById('adminLoginForm').style.display = 'none';
-        }
+        function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; document.getElementById('adminLoginForm').style.display = 'none'; }
+        function showLogin() { document.getElementById('registerForm').style.display = 'none'; document.getElementById('loginForm').style.display = 'block'; document.getElementById('adminLoginForm').style.display = 'none'; }
+        function showAdminLogin() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'none'; document.getElementById('adminLoginForm').style.display = 'block'; }
 
-        function showLogin() {
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('adminLoginForm').style.display = 'none';
-        }
-
-        function showAdminLogin() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('adminLoginForm').style.display = 'block';
-        }
-
-        // ========== USER AUTH ==========
         async function register(e) {
             e.preventDefault();
             const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: document.getElementById('regName').value,
-                    email: document.getElementById('regEmail').value,
-                    password: document.getElementById('regPassword').value,
-                    phone: document.getElementById('regPhone').value
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: document.getElementById('regName').value, email: document.getElementById('regEmail').value, password: document.getElementById('regPassword').value, phone: document.getElementById('regPhone').value })
             });
             const data = await res.json();
-            if (data.success) {
-                showMessage('Account created! Please login.', 'success', 'authMessage');
-                showLogin();
-            } else {
-                showMessage(data.error, 'error', 'authMessage');
-            }
+            if (data.success) { showMessage('Account created! Please login.', 'success', 'authMessage'); showLogin(); }
+            else showMessage(data.error, 'error', 'authMessage');
         }
 
         async function login(e) {
             e.preventDefault();
             const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: document.getElementById('loginEmail').value,
-                    password: document.getElementById('loginPassword').value
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value })
             });
             const data = await res.json();
-            if (data.success) {
-                localStorage.setItem('user', JSON.stringify(data.user));
-                location.reload();
-            } else {
-                showMessage(data.error, 'error', 'authMessage');
-            }
+            if (data.success) { localStorage.setItem('user', JSON.stringify(data.user)); location.reload(); }
+            else showMessage(data.error, 'error', 'authMessage');
         }
 
-        function logout() {
-            localStorage.clear();
-            location.reload();
-        }
+        function logout() { localStorage.clear(); location.reload(); }
 
-        // ========== USER DASHBOARD ==========
         async function loadDashboard() {
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('dashboardContainer').style.display = 'block';
@@ -594,254 +523,152 @@
 
         async function applyLoan(e) {
             e.preventDefault();
-            
             const checkRes = await fetch(`/api/check-active-loan/${currentUser.id}`);
             const check = await checkRes.json();
-            if (check.hasActiveLoan) {
-                showMessage('You have an active loan! Please repay it first.', 'error');
-                return;
-            }
-
+            if (check.hasActiveLoan) return showMessage('You have an active loan! Please repay first.', 'error');
             const amount = parseFloat(document.getElementById('loanAmount').value);
-            if (amount < 200 || amount > 5000) {
-                showMessage('Amount must be between KES 200 and KES 5,000', 'error');
-                return;
-            }
-
+            if (amount < 200 || amount > 5000) return showMessage('Amount must be between KES 200 and 5,000', 'error');
             const res = await fetch('/api/loans/apply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: currentUser.id, amount })
             });
             const data = await res.json();
-            if (data.success) {
-                showMessage(data.loan.message, 'success');
-                document.getElementById('applyLoanForm').reset();
-                loadStats();
-            } else {
-                showMessage(data.error, 'error');
-            }
+            if (data.success) { showMessage(data.loan.message, 'success'); document.getElementById('applyLoanForm').reset(); loadStats(); }
+            else showMessage(data.error, 'error');
         }
 
         async function showMyLoans() {
             document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('myLoansContent').style.display = 'block';
-
             const res = await fetch(`/api/loans/my/${currentUser.id}`);
             const loans = await res.json();
-
-            if (loans.length === 0) {
-                document.getElementById('loansList').innerHTML = '<p>No loans yet. Apply for your first loan!</p>';
-                return;
-            }
-
+            if (loans.length === 0) { document.getElementById('loansList').innerHTML = '<p>No loans yet. Apply for your first loan!</p>'; return; }
+            
             document.getElementById('loansList').innerHTML = `<div class="loans-grid">${loans.map(l => `
                 <div class="loan-card">
                     <div class="loan-amount">KES ${l.amount}</div>
                     <div>Interest: ${l.interestRate}%</div>
                     <div>Due Date: ${new Date(l.dueDate).toLocaleDateString()}</div>
                     <div>Total Payable: KES ${l.totalPayable}</div>
+                    <div>Paid: KES ${l.paidAmount || 0}</div>
                     <div>Remaining: KES ${l.remainingAmount}</div>
                     <div class="loan-status status-${l.status}">${l.status.toUpperCase()}</div>
                     ${l.status === 'active' ? `
-                        <div class="payment-input">
-                            <input type="number" id="amt_${l.id}" placeholder="Amount in KES">
-                            <button class="btn btn-success" onclick="makePayment(${l.id})">Make Payment</button>
+                        <div class="payment-section">
+                            <h4>Make Payment</h4>
+                            <div class="payment-input">
+                                <input type="number" id="amt_${l.id}" placeholder="Amount in KES">
+                                <button class="btn-success" onclick="makePayment(${l.id})">Cash Payment</button>
+                            </div>
+                            <div class="mpesa-input">
+                                <input type="tel" id="phone_${l.id}" placeholder="M-Pesa Phone (e.g., 0712345678)">
+                                <button class="btn-mpesa" onclick="payWithMpesa(${l.id})">💳 Pay with M-Pesa</button>
+                            </div>
                         </div>
                     ` : ''}
+                    ${l.status === 'completed' ? '<div class="info-box" style="margin-top:10px">✅ Loan fully repaid! Thank you!</div>' : ''}
                 </div>
             `).join('')}</div>`;
         }
 
         async function makePayment(loanId) {
             const amount = parseFloat(document.getElementById(`amt_${loanId}`).value);
-            if (!amount || amount <= 0) {
-                showMessage('Please enter a valid amount', 'error');
-                return;
-            }
-
+            if (!amount || amount <= 0) return showMessage('Enter valid amount', 'error');
             const res = await fetch('/api/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ loanId, amount })
             });
             const data = await res.json();
-            if (data.success) {
-                showMessage(data.message, 'success');
-                showMyLoans();
-                loadStats();
-            } else {
-                showMessage(data.error, 'error');
-            }
+            if (data.success) { showMessage(data.message, 'success'); showMyLoans(); loadStats(); }
+            else showMessage(data.error, 'error');
         }
 
-        function showDashboard() {
-            document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none');
-            document.getElementById('dashboardContent').style.display = 'block';
-            loadStats();
-        }
-
-        function showApplyLoan() {
-            document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none');
-            document.getElementById('applyLoanContent').style.display = 'block';
-        }
-
-        // ========== ADMIN FUNCTIONS ==========
-        async function adminLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById('adminEmail').value;
-            const password = document.getElementById('adminPassword').value;
+        async function payWithMpesa(loanId) {
+            const amount = parseFloat(document.getElementById(`amt_${loanId}`).value);
+            const phone = document.getElementById(`phone_${loanId}`).value;
             
-            const res = await fetch('/api/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+            if (!amount || amount <= 0) return showMessage('Enter amount first', 'error');
+            if (!phone) return showMessage('Enter M-Pesa phone number', 'error');
+            
+            showMessage('Processing M-Pesa payment... Please wait.', 'success');
+            
+            const res = await fetch('/api/mpesa/stkpush', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, amount, loanId, userId: currentUser.id })
             });
             const data = await res.json();
             
-            if (data.success) {
-                isAdmin = true;
-                adminToken = 'admin123';
-                localStorage.setItem('isAdmin', 'true');
-                localStorage.setItem('adminToken', adminToken);
-                loadAdminDashboard();
-            } else {
-                showMessage(data.error, 'error', 'authMessage');
-            }
+            if (data.success) { showMessage(data.message, 'success'); showMyLoans(); loadStats(); }
+            else showMessage(data.error, 'error');
         }
 
-        function adminLogout() {
-            localStorage.removeItem('isAdmin');
-            localStorage.removeItem('adminToken');
-            isAdmin = false;
-            location.reload();
-        }
+        function showDashboard() { document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none'); document.getElementById('dashboardContent').style.display = 'block'; loadStats(); }
+        function showApplyLoan() { document.querySelectorAll('#dashboardContainer .dashboard-content').forEach(el => el.style.display = 'none'); document.getElementById('applyLoanContent').style.display = 'block'; }
+        function showMyLoansFromMenu() { showMyLoans(); }
 
+        // Admin Functions
+        async function adminLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/api/admin/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: document.getElementById('adminEmail').value, password: document.getElementById('adminPassword').value })
+            });
+            const data = await res.json();
+            if (data.success) { localStorage.setItem('isAdmin', 'true'); localStorage.setItem('adminToken', 'admin123'); location.reload(); }
+            else showMessage(data.error, 'error', 'authMessage');
+        }
+        function adminLogout() { localStorage.clear(); location.reload(); }
         async function loadAdminDashboard() {
             document.getElementById('authContainer').style.display = 'none';
-            document.getElementById('dashboardContainer').style.display = 'none';
             document.getElementById('adminContainer').style.display = 'block';
-            await loadAdminStats();
+            const res = await fetch('/api/admin/loans', { headers: { 'Authorization': 'Bearer admin123' } });
+            const loans = await res.json();
+            const resUsers = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer admin123' } });
+            const users = await resUsers.json();
+            document.getElementById('adminTotalUsers').innerText = users.length || 0;
+            document.getElementById('adminTotalLoans').innerText = loans.length || 0;
+            document.getElementById('adminActiveLoans').innerText = loans.filter(l => l.status === 'active').length || 0;
+            document.getElementById('adminCompletedLoans').innerText = loans.filter(l => l.status === 'completed').length || 0;
         }
-
-        async function loadAdminStats() {
-            try {
-                const res = await fetch('/api/admin/loans', {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
-                });
-                const loans = await res.json();
-                
-                const resUsers = await fetch('/api/admin/users', {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
-                });
-                const users = await resUsers.json();
-                
-                document.getElementById('adminTotalUsers').innerText = users.length || 0;
-                document.getElementById('adminTotalLoans').innerText = loans.length || 0;
-                document.getElementById('adminActiveLoans').innerText = loans.filter(l => l.status === 'active').length || 0;
-                document.getElementById('adminCompletedLoans').innerText = loans.filter(l => l.status === 'completed').length || 0;
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
         async function showAdminUsers() {
             document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('adminUsersContent').style.display = 'block';
-            
-            const res = await fetch('/api/admin/users', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            });
+            const res = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer admin123' } });
             const users = await res.json();
-            
-            if (users.length === 0) {
-                document.getElementById('adminUsersList').innerHTML = '<p>No users yet.</p>';
-                return;
-            }
-            
-            document.getElementById('adminUsersList').innerHTML = `
-                <table>
-                    <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th></tr>
-                    ${users.map(u => `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${u.phone || '-'}</td></tr>`).join('')}
-                </table>
-            `;
+            document.getElementById('adminUsersList').innerHTML = `<table style="width:100%"><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th></tr>${users.map(u => `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${u.phone || '-'}</td></tr>`).join('')}</table>`;
         }
-
         async function showAdminLoans() {
             document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('adminLoansContent').style.display = 'block';
-            
-            const res = await fetch('/api/admin/loans', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            });
+            const res = await fetch('/api/admin/loans', { headers: { 'Authorization': 'Bearer admin123' } });
             const loans = await res.json();
-            
-            if (loans.length === 0) {
-                document.getElementById('adminLoansList').innerHTML = '<p>No loans yet.</p>';
-                return;
-            }
-            
-            document.getElementById('adminLoansList').innerHTML = `
-                <div class="loans-grid">
-                    ${loans.map(l => `
-                        <div class="loan-card">
-                            <div class="loan-amount">KES ${l.amount}</div>
-                            <div>👤 ${l.borrowerName}</div>
-                            <div>📧 ${l.borrowerEmail}</div>
-                            <div>📅 Due: ${l.dueDate}</div>
-                            <div>💰 Total: KES ${l.totalPayable} | Paid: KES ${l.paidAmount || 0}</div>
-                            <div class="loan-status status-${l.status}">${l.status.toUpperCase()}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+            document.getElementById('adminLoansList').innerHTML = `<div class="loans-grid">${loans.map(l => `<div class="loan-card"><div class="loan-amount">KES ${l.amount}</div><div>👤 ${l.borrowerName}</div><div>📧 ${l.borrowerEmail}</div><div>📅 Due: ${l.dueDate}</div><div>💰 Total: KES ${l.totalPayable} | Paid: KES ${l.paidAmount || 0}</div><div class="loan-status status-${l.status}">${l.status.toUpperCase()}</div></div>`).join('')}</div>`;
         }
-
         async function showAdminProfits() {
             document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
             document.getElementById('adminProfitsContent').style.display = 'block';
-            
-            const res = await fetch('/api/admin/profits', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            });
+            const res = await fetch('/api/admin/profits', { headers: { 'Authorization': 'Bearer admin123' } });
             const p = await res.json();
-            
-            document.getElementById('profitsData').innerHTML = `
-                <div class="stats-grid">
-                    <div class="stat-card profit-card"><h3>Total Loans Given</h3><div class="value">${p.totalLoansGiven}</div></div>
-                    <div class="stat-card profit-card"><h3>Completed Loans</h3><div class="value">${p.completedLoans}</div></div>
-                    <div class="stat-card profit-card"><h3>Active Loans</h3><div class="value">${p.activeLoans}</div></div>
-                    <div class="stat-card"><h3>Total Disbursed</h3><div class="value">KES ${p.totalDisbursed}</div></div>
-                    <div class="stat-card"><h3>Total Collected</h3><div class="value">KES ${p.totalCollected}</div></div>
-                    <div class="stat-card profit-card"><h3>💰 TOTAL PROFIT</h3><div class="value">KES ${p.totalProfit}</div></div>
-                    <div class="stat-card"><h3>Expected Profit</h3><div class="value">KES ${p.expectedProfit}</div></div>
-                </div>
-            `;
+            document.getElementById('profitsData').innerHTML = `<div class="stats-grid"><div class="stat-card"><h3>Total Loans</h3><div class="value">${p.totalLoansGiven}</div></div><div class="stat-card"><h3>Completed</h3><div class="value">${p.completedLoans}</div></div><div class="stat-card"><h3>Active</h3><div class="value">${p.activeLoans}</div></div><div class="stat-card"><h3>Total Profit</h3><div class="value">KES ${p.totalProfit}</div></div></div>`;
         }
+        function showAdminDashboard() { document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none'); document.getElementById('adminDashboardContent').style.display = 'block'; loadAdminDashboard(); }
 
-        function showAdminDashboard() {
-            document.querySelectorAll('#adminContainer .dashboard-content').forEach(el => el.style.display = 'none');
-            document.getElementById('adminDashboardContent').style.display = 'block';
-            loadAdminStats();
-        }
-
-        // ========== EVENT LISTENERS ==========
+        // Event Listeners
         document.getElementById('loginFormElement')?.addEventListener('submit', login);
         document.getElementById('registerFormElement')?.addEventListener('submit', register);
         document.getElementById('applyLoanForm')?.addEventListener('submit', applyLoan);
         document.getElementById('adminLoginFormElement')?.addEventListener('submit', adminLogin);
 
-        // ========== INITIALIZATION ==========
-        const savedIsAdmin = localStorage.getItem('isAdmin') === 'true';
-        const savedAdminToken = localStorage.getItem('adminToken');
+        // Preview loan amount
+        document.getElementById('loanAmount')?.addEventListener('input', function() {
+            const amount = parseFloat(this.value);
+            if (amount > 0) { document.getElementById('previewTotal').innerHTML = `KES ${amount + (amount * 0.25)}`; }
+            else { document.getElementById('previewTotal').innerHTML = 'KES 0'; }
+        });
 
-        if (savedIsAdmin && savedAdminToken) {
-            isAdmin = true;
-            adminToken = savedAdminToken;
-            loadAdminDashboard();
-        } else if (currentUser) {
-            loadDashboard();
-        }
+        // Check for admin session
+        if (localStorage.getItem('isAdmin') === 'true') { loadAdminDashboard(); }
+        else if (currentUser) { loadDashboard(); }
     </script>
 </body>
 </html>
